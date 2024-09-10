@@ -1,0 +1,6 @@
+  type: http
+  method: GET
+  url: https://example.com/
+  headers:
+    Authorization: Basic 123
+    Content-Type: application/json
