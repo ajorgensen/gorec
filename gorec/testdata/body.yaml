@@ -1,6 +1,0 @@
-  method: GET
-  url: https://example.com/
-  body: >
-    {
-      "foo": "bar"
-    }

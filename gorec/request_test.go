@@ -1,6 +1,9 @@
 package gorec
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -19,23 +22,38 @@ func loadExample(t *testing.T, name string) Request {
 	return r
 }
 
-func TestRequest(t *testing.T) {
-	t.Run("simple", func(t *testing.T) {
-		r := loadExample(t, "simple.yaml")
-		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "https://example.com/", r.URL)
-	})
+func TestExecute(t *testing.T) {
+	r, err := ParseFile("testdata/get.lua")
+	assert.NoError(t, err)
 
-	t.Run("headers", func(t *testing.T) {
-		r := loadExample(t, "headers.yaml")
-		assert.Equal(t, map[string]string{
-			"Authorization": "Basic 123",
-			"Content-Type":  "application/json",
-		}, r.Headers)
-	})
+	assert.Equal(t, http.MethodGet, r.Method)
+	assert.Equal(t, "https://example.com/", r.URL)
+}
 
-	t.Run("body", func(t *testing.T) {
-		r := loadExample(t, "body.yaml")
-		assert.Equal(t, "{\n  \"foo\": \"bar\"\n}\n", r.Body)
-	})
+func TestDo(t *testing.T) {
+	// Create a test server
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Hello, World!"))
+	}))
+	defer ts.Close()
+
+	// Update the URL in the test data to use the test server's URL
+	r, err := ParseFile("testdata/get.lua")
+	assert.NoError(t, err)
+
+	r.URL = ts.URL // Use the test server's URL
+
+	// Execute the request
+	resp, err := Do(r)
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, "Hello, World!", string(body))
 }
