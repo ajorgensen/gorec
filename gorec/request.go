@@ -1,14 +1,19 @@
 package gorec
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 
 	lua "github.com/yuin/gopher-lua"
 )
 
 type Request struct {
-	Method string
-	URL    string
+	Method  string
+	URL     string
+	Headers map[string]string
+	Body    []byte
 }
 
 func ParseFile(path string) (Request, error) {
@@ -16,8 +21,13 @@ func ParseFile(path string) (Request, error) {
 	defer lState.Close()
 
 	var r Request
+	r.Headers = make(map[string]string)
 
 	lState.SetGlobal("get", lState.NewFunction(get(&r)))
+	lState.SetGlobal("post", lState.NewFunction(post(&r)))
+
+	lState.SetGlobal("headers", lState.NewFunction(headers(&r)))
+	lState.SetGlobal("body", lState.NewFunction(body(&r)))
 	if err := lState.DoFile(path); err != nil {
 		return r, err
 	}
@@ -32,8 +42,80 @@ func Do(r Request) (*http.Response, error) {
 		return nil, err
 	}
 
+	// Add the headers to the request
+	for k, v := range r.Headers {
+		req.Header.Set(k, v)
+	}
+
+	// Add the body to the request
+	if len(r.Body) > 0 {
+		req.Body = io.NopCloser(bytes.NewReader(r.Body))
+	}
+
 	// Do the request
 	return http.DefaultClient.Do(req)
+}
+
+func headers(r *Request) func(L *lua.LState) int {
+	return func(L *lua.LState) int {
+		// Get the first argument as a table
+		// TODO: Error handling
+		t := L.ToTable(1)
+
+		t.ForEach(func(k lua.LValue, v lua.LValue) {
+			r.Headers[k.String()] = v.String()
+		})
+
+		return 0
+	}
+}
+
+func body(r *Request) func(L *lua.LState) int {
+	return func(L *lua.LState) int {
+		L.CheckTypes(1, lua.LTString, lua.LTTable)
+
+		switch L.Get(1).Type() {
+		case lua.LTString:
+			r.Body = []byte(L.ToString(1))
+			return 0
+		case lua.LTTable:
+			var err error
+
+			// encode the table as JSON
+			t := L.ToTable(1)
+
+			data := make(map[string]interface{})
+			t.ForEach(func(k lua.LValue, v lua.LValue) {
+				data[k.String()] = v.String()
+			})
+
+			r.Body, err = json.Marshal(data)
+			if err != nil {
+				return 1
+			}
+
+			return 0
+		}
+
+		return 0
+	}
+}
+
+func post(r *Request) func(L *lua.LState) int {
+	return func(L *lua.LState) int {
+		r.Method = http.MethodPost
+
+		// Get the first argument as a table
+		// TODO: Error handling
+		t := L.ToTable(1)
+
+		// Get the URl
+		// TODO: Check if the url is LNil
+		url := t.RawGetString("url")
+		r.URL = url.String()
+
+		return 0
+	}
 }
 
 func get(r *Request) func(L *lua.LState) int {
@@ -45,6 +127,7 @@ func get(r *Request) func(L *lua.LState) int {
 		t := L.ToTable(1)
 
 		// Get the URl
+		// TODO: Check if the url is LNil
 		url := t.RawGetString("url")
 		r.URL = url.String()
 
