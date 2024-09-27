@@ -25,6 +25,7 @@ func ParseFile(path string, environment map[string]string) (Request, error) {
 
 	lState.SetGlobal("get", lState.NewFunction(get(&r)))
 	lState.SetGlobal("post", lState.NewFunction(post(&r)))
+	lState.SetGlobal("gql", lState.NewFunction(gql(&r)))
 
 	lState.SetGlobal("headers", lState.NewFunction(headers(&r)))
 	lState.SetGlobal("body", lState.NewFunction(body(&r)))
