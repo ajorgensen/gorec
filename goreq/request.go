@@ -1,4 +1,4 @@
-package gorec
+package goreq
 
 import (
 	"bytes"

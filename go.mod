@@ -1,4 +1,4 @@
-module github.com/ajorgensen/gorec
+module github.com/ajorgensen/goreq
 
 go 1.23.0
 
