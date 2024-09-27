@@ -10,8 +10,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestEnv(t *testing.T) {
+	env := map[string]string{
+		"API_KEY": "abc123",
+	}
+
+	r, err := ParseFile("testdata/env.lua", env)
+	assert.NoError(t, err)
+
+	headers := r.Headers
+	assert.Equal(t, "Bearer abc123", headers["Authorization"])
+}
+
 func TestExecute(t *testing.T) {
-	r, err := ParseFile("testdata/get.lua")
+	r, err := ParseFile("testdata/get.lua", nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, http.MethodGet, r.Method)
@@ -46,7 +58,7 @@ func TestDoPostJson(t *testing.T) {
 	defer ts.Close()
 
 	// Update the URL in the test data to use the test server's URL
-	r, err := ParseFile("testdata/post_json.lua")
+	r, err := ParseFile("testdata/post_json.lua", nil)
 	assert.NoError(t, err)
 
 	r.URL = ts.URL // Use the test server's URL
@@ -80,7 +92,7 @@ func TestDoPost(t *testing.T) {
 	defer ts.Close()
 
 	// Update the URL in the test data to use the test server's URL
-	r, err := ParseFile("testdata/post_raw_body.lua")
+	r, err := ParseFile("testdata/post_raw_body.lua", nil)
 	assert.NoError(t, err)
 
 	r.URL = ts.URL // Use the test server's URL
@@ -109,7 +121,7 @@ func TestDo(t *testing.T) {
 	defer ts.Close()
 
 	// Update the URL in the test data to use the test server's URL
-	r, err := ParseFile("testdata/get.lua")
+	r, err := ParseFile("testdata/get.lua", nil)
 	assert.NoError(t, err)
 
 	r.URL = ts.URL // Use the test server's URL

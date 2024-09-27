@@ -16,7 +16,7 @@ type Request struct {
 	Body    []byte
 }
 
-func ParseFile(path string) (Request, error) {
+func ParseFile(path string, environment map[string]string) (Request, error) {
 	lState := lua.NewState()
 	defer lState.Close()
 
@@ -28,6 +28,8 @@ func ParseFile(path string) (Request, error) {
 
 	lState.SetGlobal("headers", lState.NewFunction(headers(&r)))
 	lState.SetGlobal("body", lState.NewFunction(body(&r)))
+	lState.SetGlobal("env", lState.NewFunction(env(environment)))
+
 	if err := lState.DoFile(path); err != nil {
 		return r, err
 	}
@@ -54,6 +56,29 @@ func Do(r Request) (*http.Response, error) {
 
 	// Do the request
 	return http.DefaultClient.Do(req)
+}
+
+func env(environment map[string]string) func(L *lua.LState) int {
+	return func(L *lua.LState) int {
+		if environment == nil {
+			return 0
+		}
+
+		// Get the first argument as a string
+		key := L.ToString(1)
+
+		// Look up the environemnt value
+		value, ok := environment[key]
+		if !ok {
+			return 0
+		}
+
+		v := lua.LString(value)
+
+		L.Push(v)
+
+		return 1
+	}
 }
 
 func headers(r *Request) func(L *lua.LState) int {
