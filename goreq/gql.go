@@ -15,15 +15,15 @@ type GQLRequest struct {
 // TODO: Error handling
 func gql(r *Request) func(L *lua.LState) int {
 	return func(L *lua.LState) int {
-		// First argument is the query
-		query := L.ToString(1)
+		t := L.ToTable(1)
 
-		// Second argument is the variables
+		q := t.RawGetString("query")
+		v := t.RawGetString("variables")
+
 		var variables map[string]interface{}
-		if L.Get(2) != lua.LNil {
+		if v != lua.LNil {
 			variables = make(map[string]interface{})
-			L.CheckTypes(2, lua.LTTable)
-			t := L.ToTable(2)
+			t := v.(*lua.LTable)
 			t.ForEach(func(k lua.LValue, v lua.LValue) {
 				variables[k.String()] = v.String()
 			})
@@ -31,7 +31,7 @@ func gql(r *Request) func(L *lua.LState) int {
 
 		// create the request
 		gqlRequest := GQLRequest{
-			Query:     query,
+			Query:     q.String(),
 			Variables: variables,
 		}
 

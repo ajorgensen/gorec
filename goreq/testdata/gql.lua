@@ -6,16 +6,16 @@ headers({
   ["Content-Type"] = "application/json",
 })
 
-gql(
-  [[
-query Continents($code: String!) {
-    continents(filter: {code: {eq: $code}}) {
-      code
-      name
+gql({
+  query = [[
+    query Continents($code: String!) {
+      continents(filter: {code: {eq: $code}}) {
+        code
+        name
+      }
     }
-}
-]],
-  {
+  ]],
+  variables = {
     code = "EU",
-  }
-)
+  },
+})
